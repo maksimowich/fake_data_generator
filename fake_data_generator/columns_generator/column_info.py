@@ -1,14 +1,13 @@
 from typing import Callable
+from copy import deepcopy
 
 
 class ForeignKey:
     def __init__(self,
                  ref_table_name_with_schema_or_file_path: str,
-                 ref_column_name: str,
-                 ref_file_encoding: str = None):
+                 ref_column_name: str):
         self.ref_table_name_with_schema_or_file_path = ref_table_name_with_schema_or_file_path
         self.ref_column_name = ref_column_name
-        self.ref_file_encoding = ref_file_encoding
 
     def __str__(self):
         return self.ref_table_name_with_schema_or_file_path + ':' + self.ref_column_name
@@ -18,9 +17,6 @@ class ForeignKey:
 
     def get_ref_column_name(self):
         return self.ref_column_name
-
-    def get_ref_file_encoding(self):
-        return self.ref_file_encoding
 
 
 class ColumnInfo:
@@ -46,15 +42,33 @@ class ColumnInfo:
                  categorical_flag: bool = None,
                  id_flag: bool = None,
                  regex: str = None,
-                 json_info: list = None,
-                 faker_function: Callable = None):
+                 faker_function: Callable = None,
+                 data_type: str = None,
+                 generator=None):
         self.column_name = column_name
         self.fk = fk
         self.categorical_flag = categorical_flag
         self.id_flag = id_flag
         self.regex = regex
-        self.json_info = json_info
         self.faker_function = faker_function
+        self.data_type = data_type
+        self.generator = generator
+
+    def set_generator(self, generator_function):
+        generator = generator_function()
+        next(generator)
+        self.generator = generator
+
+    def get_generator(self):
+        return self.generator
+
+    def get_data_type(self):
+        return self.data_type
+
+    def create_new_column_info_obj_with_set_data_type(self, data_type):
+        new_obj = deepcopy(self)
+        new_obj.data_type = data_type
+        return new_obj
 
     def get_column_name(self):
         return self.column_name
@@ -71,30 +85,5 @@ class ColumnInfo:
     def get_regex(self):
         return self.regex
 
-    def get_json_info(self):
-        return self.json_info
-
     def get_faker_function(self):
         return self.faker_function
-
-
-class CsvColumnInfo(ColumnInfo):
-    def __init__(self,
-                 column_name: str = None,
-                 fk: ForeignKey = None,
-                 categorical_flag: bool = None,
-                 id_flag: bool = None,
-                 regex: str = None,
-                 json_info: list = None,
-                 faker_function: Callable = None,
-                 json_flag: bool = False,
-                 datetime_flag: bool = False):
-        super().__init__(column_name, fk, categorical_flag, id_flag, regex, json_info, faker_function)
-        self.json_flag = json_flag
-        self.datetime_flag = datetime_flag
-
-    def get_json_flag(self):
-        return self.json_flag
-
-    def get_datetime_flag(self):
-        return self.datetime_flag

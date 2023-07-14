@@ -18,3 +18,7 @@ generate_fake_table(engine=engine,
                     number_of_rows_from_which_to_create_pattern=1000,
                     columns_info=columns_info,
                     columns_to_include=['airport_code', 'city'])
+
+
+ColumnInfo(column_name='city',
+           json_info=[ColumnInfo(column_name='en', faker_function=faker.city)]),

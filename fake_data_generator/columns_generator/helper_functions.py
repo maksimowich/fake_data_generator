@@ -1,5 +1,4 @@
 import re
-from pandas import Series, concat
 from typing import Iterable
 
 
@@ -59,44 +58,3 @@ def get_common_regex(strings: Iterable[str]) -> str:
     for _, symbol_regex in sorted(common_pattern.items()):
         common_pattern_string += '[' + symbol_regex + ']'
     return common_pattern_string
-
-
-def get_list_of_series_for_json_column(column_values: Series):
-    series_name_to_series = {}
-
-    def traverse_dict(dictionary, keys_path=None):
-        if keys_path is None:
-            keys_path = tuple()
-
-        for key, value in dictionary.items():
-            if not isinstance(value, dict):
-                series_name = '->'.join(keys_path + (key,))
-                series = series_name_to_series.get(series_name)
-                series_name_to_series[series_name] = concat([series, Series([dictionary.get(key)])], ignore_index=True)
-            if isinstance(value, dict):
-                traverse_dict(value, keys_path + (key,))
-
-    for column_value_in_dict in column_values:
-        traverse_dict(column_value_in_dict)
-
-    list_of_series = []
-    for series_name, series in series_name_to_series.items():
-        series.name = series_name
-        list_of_series.append(series)
-
-    return list_of_series
-
-
-def set_value_by_key_path(dictionary: dict,
-                          key_path: Iterable,
-                          value):
-    current_dictionary = dictionary
-
-    for index, key in enumerate(key_path):
-        if not isinstance(current_dictionary.get(key), dict) and index < len(key_path) -1:
-            current_dictionary[key] = {}
-            current_dictionary = current_dictionary[key]
-        elif isinstance(current_dictionary.get(key), dict) and index < len(key_path) -1:
-            current_dictionary = current_dictionary[key]
-        else:
-            current_dictionary[key] = value

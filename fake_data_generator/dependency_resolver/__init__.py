@@ -1,2 +1,0 @@
-from fake_data_generator.dependency_resolver.entity import Entity
-from fake_data_generator.dependency_resolver.dependencies_graph import generate_fake_data, get_dependencies_graph
