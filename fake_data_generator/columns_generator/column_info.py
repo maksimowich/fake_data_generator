@@ -54,8 +54,7 @@ class ColumnInfo:
         self.data_type = data_type
         self.generator = generator
 
-    def set_generator(self, generator_function):
-        generator = generator_function()
+    def set_generator(self, generator):
         next(generator)
         self.generator = generator
 

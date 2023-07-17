@@ -1,2 +1,3 @@
 from fake_data_generator.columns_generator import ColumnInfo, ForeignKey
 from fake_data_generator.sources_formats import generate_fake_table
+from fake_data_generator.sources_formats import generate_fake_table_inf_gen
