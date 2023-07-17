@@ -1,5 +1,4 @@
 import random
-import math
 import numpy as np
 from decimal import Decimal
 from fake_data_generator.columns_generator.helper_functions import get_common_regex
@@ -67,8 +66,9 @@ def get_fake_data_generator_for_decimal_column(column_values: Series):
 
 def get_fake_data_generator_for_date_column(column_values: Series):
     output_size = yield
-    start_date = column_values.min()
-    end_date = column_values.max()
+    column_values_without_nulls = column_values.dropna()
+    start_date = column_values_without_nulls.min()
+    end_date = column_values_without_nulls.max()
     range_in_days = (end_date - start_date).days
     while True:
         fake_dates = [start_date + timedelta(days=randint(0, range_in_days)) for _ in range(output_size)]
@@ -77,8 +77,9 @@ def get_fake_data_generator_for_date_column(column_values: Series):
 
 def get_fake_data_generator_for_timestamp_column(column_values: Series):
     output_size = yield
-    start_timestamp = column_values.min()
-    end_timestamp = column_values.max()
+    column_values_without_nulls = column_values.dropna()
+    start_timestamp = column_values_without_nulls.min()
+    end_timestamp = column_values_without_nulls.max()
     range_in_sec = (end_timestamp - start_timestamp).total_seconds()
     while True:
         fake_timestamps = [(start_timestamp + timedelta(seconds=uniform(0, range_in_sec))).replace(microsecond=0) for _ in range(output_size)]

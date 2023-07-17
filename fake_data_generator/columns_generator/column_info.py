@@ -20,22 +20,6 @@ class ForeignKey:
 
 
 class ColumnInfo:
-    """
-    Class needed for column description.
-
-    Parameters
-    ----------
-     column_name: Column name
-     fk: Foreign key
-     categorical_flag: Whether to treat column as categorical or not
-     id_flag: Whether to treat column as id
-     regex: Common regular expression of column`s values
-     json_info: If column is of json type, json_info parameter specifies information values of particular keys
-                It is list of ColumnInfo objects
-                Names of json keys are separated by '->' if there is nested structure
-     faker_function: Function that will return random values for column
-        """
-
     def __init__(self,
                  column_name: str = None,
                  fk: ForeignKey = None,
