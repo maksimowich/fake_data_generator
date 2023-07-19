@@ -1,8 +1,41 @@
 import re
-from typing import Iterable
+from numpy import linspace
+from scipy.stats import gaussian_kde
 
 
-def get_common_regex(strings: Iterable[str]) -> str:
+def get_info_for_categorical_column(column_values):
+    normalized_frequencies_of_values = column_values.value_counts(normalize=True, dropna=False)
+    values = normalized_frequencies_of_values.index.tolist()
+    probabilities = normalized_frequencies_of_values.to_list()
+    return values, probabilities
+
+
+def get_info_for_number_column(column_values):
+    column_values_without_null = column_values.dropna()
+    kde = gaussian_kde(column_values_without_null.values)
+    x = linspace(min(column_values_without_null), max(column_values_without_null), num=1000)
+    pdf = kde.evaluate(x)
+    probabilities = pdf/sum(pdf)
+    return x, probabilities
+
+
+def get_info_for_date_column(column_values):
+    column_values_without_nulls = column_values.dropna()
+    start_date = column_values_without_nulls.min()
+    end_date = column_values_without_nulls.max()
+    range_in_days = (end_date - start_date).days
+    return start_date, range_in_days
+
+
+def get_info_for_timestamp_column(column_values):
+    column_values_without_nulls = column_values.dropna()
+    start_timestamp = column_values_without_nulls.min()
+    end_timestamp = column_values_without_nulls.max()
+    range_in_sec = (end_timestamp - start_timestamp).total_seconds()
+    return start_timestamp, range_in_sec
+
+
+def get_common_regex(strings) -> str:
     """
     Function that returns common regular expression of given strings.
 
