@@ -3,7 +3,7 @@ name = "fake_data_generator"
 packages = [
   { include = "fake_data_generator" },
 ]
-version = "1.0.0"
+version = "1.0.1"
 description = ""
 authors = ["Alexander Maksimovich <cahr2001@mail.ru>"]
 

@@ -1,4 +1,7 @@
 import re
+from loguru import logger
+from pandas import concat
+from datetime import datetime
 from fake_data_generator.columns_generator.column import \
     Column, CategoricalColumn, DecimalColumn, IntColumn, TimestampColumn, DateColumn, StringColumn
 from fake_data_generator.columns_generator.get_info_for_columns import \
@@ -7,9 +10,6 @@ from fake_data_generator.columns_generator.get_generator_for_columns import \
     get_generator_for_nulls, get_fake_data_generator_for_categorical_column, get_fake_data_generator_for_int_column, \
     get_fake_data_generator_for_decimal_column, get_fake_data_generator_for_date_column, \
     get_fake_data_generator_for_timestamp_column, get_fake_data_generator_for_string_column
-from loguru import logger
-from pandas import concat
-from datetime import datetime, date
 
 
 def get_rich_column_info(column_values,

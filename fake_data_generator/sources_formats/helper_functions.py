@@ -1,4 +1,3 @@
-import json
 import pandas as pd
 import sqlalchemy
 import re
@@ -7,10 +6,18 @@ from loguru import logger
 from pandas import concat, to_datetime, Series
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DateType, TimestampType, DecimalType
 from fake_data_generator.columns_generator import get_rich_column_info, get_fake_data_for_insertion, Column
-from fake_data_generator.columns_generator.get_fake_date_for_columns import get_columns_info_with_set_generators
 
 
-def infer_data_type(column_data_type):
+def get_string_for_column_names(columns_to_include):
+    return ','.join(map(lambda x: '`' + x + '`', columns_to_include)) if columns_to_include is not None else '*'
+
+
+def get_create_query(dest_table_name_with_schema, rich_columns_info_dict):
+    str_for_column_names_and_types = ', '.join([f"{column_name} {column_info_dict['data_type']}" for column_name, column_info_dict in rich_columns_info_dict.items()])
+    return f"CREATE TABLE IF NOT EXISTS {dest_table_name_with_schema} ({str_for_column_names_and_types});"
+
+
+def get_inferred_data_type(column_data_type):
     if column_data_type == 'string':
         return StringType()
     elif 'int' in column_data_type:
@@ -44,15 +51,6 @@ def get_correct_column_values(column_values: Series, column_data_type: str):
         return column_values.apply(lambda x: x.to_pydatetime())
     else:
         return column_values
-
-
-def get_string_for_column_names(columns_to_include):
-    return ','.join(map(lambda x: '`' + x + '`', columns_to_include)) if columns_to_include is not None else '*'
-
-
-def get_create_query(dest_table_name_with_schema, rich_columns_info_dict):
-    str_for_column_names_and_types = ', '.join([f"{column_name} {column_info_dict['data_type']}" for column_name, column_info_dict in rich_columns_info_dict.items()])
-    return f"CREATE TABLE IF NOT EXISTS {dest_table_name_with_schema} ({str_for_column_names_and_types});"
 
 
 def get_rich_columns_info(conn,
@@ -117,7 +115,9 @@ def execute_insertion(conn,
                       batch_size):
     schema = None
     if not isinstance(conn, sqlalchemy.engine.base.Engine):
-        schema = StructType([StructField(column_info.get_column_name(), infer_data_type(column_info.get_data_type()), True) for column_info in columns_info_with_set_generators])
+        schema = StructType([StructField(column_info.get_column_name(), get_inferred_data_type(column_info.get_data_type()), True)
+                             for column_info in columns_info_with_set_generators])
+
     number_of_rows_left_to_insert = number_of_rows_to_insert
     while number_of_rows_left_to_insert != 0:
         logger.info(f'-----------Start generating batch of fake data-----------')
@@ -138,74 +138,3 @@ def execute_insertion(conn,
         number_of_rows_left_to_insert -= min(batch_size, number_of_rows_left_to_insert)
         logger.info(f'Insertion of fake data into {dest_table_name_with_schema} was finished.\n'
                     f'\tNumber of rows left to insert: {number_of_rows_left_to_insert}')
-
-
-def generate_fake_table(conn,
-                        source_table_name_with_schema: str,
-                        dest_table_name_with_schema: str,
-                        number_of_rows_to_insert: int,
-                        number_of_rows_from_which_to_create_pattern: int,
-                        columns_info: list[Column] = None,
-                        columns_to_include: list[str] = None,
-                        batch_size=100):
-    logger.info(f"generate_fake_table function was called."
-                f"\n\tSource table: {source_table_name_with_schema}"
-                f"\n\tDestination table: {dest_table_name_with_schema}"
-                f"\n\tNumber of rows to insert into destination table: {number_of_rows_to_insert}"
-                f"\n\tNumber of source table`s rows from which to create pattern: {number_of_rows_from_which_to_create_pattern}")
-
-    rich_columns_info = get_rich_columns_info(conn,
-                                              source_table_name_with_schema,
-                                              number_of_rows_from_which_to_create_pattern,
-                                              columns_info,
-                                              columns_to_include)
-
-    create_table(conn, source_table_name_with_schema, dest_table_name_with_schema, columns_to_include)
-    execute_insertion(conn, dest_table_name_with_schema, number_of_rows_to_insert, rich_columns_info, batch_size)
-
-
-def generate_table_profile(conn,
-                           source_table_name_with_schema: str,
-                           output_table_profile_path: str,
-                           number_of_rows_from_which_to_create_pattern: int,
-                           columns_info: list[Column] = None,
-                           columns_to_include: list[str] = None):
-    logger.info(f"generate_table_profile function was called."
-                f"\n\tSource table: {source_table_name_with_schema}"
-                f"\n\tNumber of source table`s rows from which to create pattern: {number_of_rows_from_which_to_create_pattern}")
-
-    rich_columns_info = get_rich_columns_info(conn,
-                                              source_table_name_with_schema,
-                                              number_of_rows_from_which_to_create_pattern,
-                                              columns_info,
-                                              columns_to_include)
-
-    dict_to_dump = {}
-    for column_info in rich_columns_info:
-        dict_to_dump.update(column_info.get_as_dict())
-
-    with open(output_table_profile_path, 'w') as file:
-        json.dump(dict_to_dump, file)
-    logger.info(f'Profile was loaded into {output_table_profile_path}.')
-
-
-def generate_table_from_profile(conn,
-                                source_table_profile_path: str,
-                                dest_table_name_with_schema: str,
-                                number_of_rows_to_insert: int,
-                                columns_info=None,
-                                batch_size=100):
-    logger.info(f"generate_fake_table function was called."
-                f"\n\tSource table profile path: {source_table_profile_path}"
-                f"\n\tDestination table: {dest_table_name_with_schema}"
-                f"\n\tNumber of rows to insert into destination table: {number_of_rows_to_insert}")
-
-    with open(source_table_profile_path, 'r') as file:
-        rich_columns_info_dict = json.load(file)
-
-    for column_info in columns_info or []:
-        rich_columns_info_dict.update(column_info.get_as_dict())
-
-    create_table(conn, dest_table_name_with_schema=dest_table_name_with_schema, create_query=get_create_query(dest_table_name_with_schema, rich_columns_info_dict))
-    columns_info_with_set_generators = get_columns_info_with_set_generators(rich_columns_info_dict)
-    execute_insertion(conn, dest_table_name_with_schema, number_of_rows_to_insert, columns_info_with_set_generators, batch_size)

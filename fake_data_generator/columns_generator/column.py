@@ -1,6 +1,3 @@
-from datetime import date, datetime
-
-
 class Column:
     def __init__(self,
                  column_name: str = None,
