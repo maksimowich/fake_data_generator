@@ -1,3 +1,4 @@
-import re
-d = {'a': {'b': 25}}
-
+from datetime import datetime
+import pytz
+d = datetime.now(tz=pytz.timezone('Europe/Moscow')).replace(microsecond=0)
+print(d.tzinfo)

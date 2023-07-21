@@ -9,6 +9,7 @@ from fake_data_generator.columns_generator.get_generator_for_columns import \
     get_fake_data_generator_for_timestamp_column, get_fake_data_generator_for_string_column
 from loguru import logger
 from pandas import concat
+from datetime import datetime, date
 
 
 def get_rich_column_info(column_values,
@@ -16,8 +17,8 @@ def get_rich_column_info(column_values,
     column_data_type = column_info.get_data_type()
     column_name = column_info.get_column_name()
 
-    categorical_column_flag = (isinstance(column_values, CategoricalColumn) or (column_values.nunique() / column_values.count() < 0.5) or column_values.nunique() == 1) and \
-        'decimal' not in column_data_type
+    categorical_column_flag = (isinstance(column_info, CategoricalColumn) or (column_values.nunique() / column_values.count() < 0.2) or column_values.nunique() in [0, 1]) and \
+        'decimal' not in column_data_type and type(column_info) in [Column, CategoricalColumn]
 
     if categorical_column_flag:
         logger.info(f'Column "{column_values.name}" — CATEGORICAL COLUMN')
@@ -39,11 +40,11 @@ def get_rich_column_info(column_values,
             if not isinstance(column_info, DecimalColumn):
                 column_info = DecimalColumn(column_name=column_name, data_type=column_data_type)
             if column_info.get_x() is None or column_info.get_probabilities() is None or column_info.get_precision() is None:
-                if column_values.unique() == 1:
+                if column_values.nunique() == 1:
                     column_info.set_generator(get_generator_for_nulls(column_info.get_column_name()))
                     return column_info
                 x, probabilities = get_info_for_number_column(column_values)
-                precision = re.search(r'decimal\((\d+),(\d+)\)', column_data_type).groups()[1]
+                precision = int(re.search(r'decimal\((\d+),(\d+)\)', column_data_type).groups()[1])
                 column_info.set_x(x)
                 column_info.set_probabilities(probabilities)
                 column_info.set_precision(precision)
@@ -70,6 +71,8 @@ def get_rich_column_info(column_values,
 
         elif column_data_type == 'timestamp':
             logger.info(f'Column "{column_values.name}" — TIMESTAMP COLUMN')
+            date_flag = column_info.get_date_flag() if isinstance(column_info, TimestampColumn) else False
+            current_dttm_flag = column_info.get_current_dttm_flag() if isinstance(column_info, TimestampColumn) else False
             if not isinstance(column_info, TimestampColumn):
                 column_info = TimestampColumn(column_name=column_name, data_type=column_data_type)
             if column_info.get_start_timestamp() is None or column_info.get_range_in_sec() is None:
@@ -78,7 +81,9 @@ def get_rich_column_info(column_values,
                 column_info.set_range_in_sec(range_in_sec)
             generator = get_fake_data_generator_for_timestamp_column(column_name,
                                                                      column_info.get_start_timestamp(),
-                                                                     column_info.get_range_in_sec())
+                                                                     column_info.get_range_in_sec(),
+                                                                     date_flag,
+                                                                     current_dttm_flag)
             column_info.set_generator(generator)
             return column_info
 
@@ -101,7 +106,7 @@ def get_rich_column_info(column_values,
             if not isinstance(column_info, StringColumn):
                 column_info = StringColumn(column_name=column_name, data_type=column_data_type)
             if column_info.get_common_regex() is None:
-                common_regex = get_common_regex(column_values)
+                common_regex = get_common_regex(column_values.dropna())
                 column_info.set_common_regex(common_regex)
             generator = get_fake_data_generator_for_string_column(column_name,
                                                                   column_info.get_common_regex())
@@ -113,20 +118,33 @@ def get_columns_info_with_set_generators(rich_columns_info_dict):
     columns_info_with_set_generators = []
     for column_name, column_info_dict in rich_columns_info_dict.items():
         column_type = column_info_dict['type']
-        column_info = Column(column_name=column_name, data_type=column_type)
+        column_data_type = column_info_dict['data_type']
+        column_info = Column(column_name=column_name, data_type=column_data_type)
         generator = None
         if column_type == 'categorical':
-            generator = get_fake_data_generator_for_categorical_column(column_name, column_info_dict['values'], column_info_dict['probabilities'])
+            if column_data_type == 'date':
+                values = list(map(lambda x: datetime.strptime(x, "%Y-%m-%d").date() if isinstance(x, str) else x, column_info_dict['values']))
+            elif column_data_type == 'timestamp':
+                values = list(map(lambda x: datetime.strptime(x, "%Y-%m-%d %H:%M:%S") if isinstance(x, str) else x, column_info_dict['values']))
+            else:
+                values = column_info_dict['values']
+            generator = get_fake_data_generator_for_categorical_column(column_name, values, column_info_dict['probabilities'])
         elif column_type == 'decimal':
-            generator = get_fake_data_generator_for_decimal_column(column_name, column_info_dict['x'], column_info_dict['probabilities'], column_info_dict['precision'])
+            if column_info_dict['x'] is None or column_info_dict['probabilities'] is None or column_info_dict['precision'] is None:
+                generator = get_generator_for_nulls(column_name)
+            else:
+                generator = get_fake_data_generator_for_decimal_column(column_name, column_info_dict['x'], column_info_dict['probabilities'], column_info_dict['precision'])
         elif column_type == 'int':
             generator = get_fake_data_generator_for_int_column(column_name, column_info_dict['x'], column_info_dict['probabilities'])
         elif column_type == 'string':
             generator = get_fake_data_generator_for_string_column(column_name, column_info_dict['common_regex'])
         elif column_type == 'date':
-            generator = get_fake_data_generator_for_date_column(column_name, column_info_dict['start_date'], column_info_dict['range_in_days'])
+            start_date = datetime.strptime(column_info_dict['start_date'], "%Y-%m-%d").date()
+            generator = get_fake_data_generator_for_date_column(column_name, start_date, column_info_dict['range_in_days'])
         elif column_type == 'timestamp':
-            generator = get_fake_data_generator_for_timestamp_column(column_name, column_info_dict['start_timestamp'], column_info_dict['range_in_sec'])
+            start_timestamp = datetime.strptime(column_info_dict['start_timestamp'], "%Y-%m-%d %H:%M:%S")
+            generator = get_fake_data_generator_for_timestamp_column(column_name, start_timestamp, column_info_dict['range_in_sec'],
+                                                                     column_info_dict['date_flag'], column_info_dict['current_dttm_flag'])
         column_info.set_generator(generator)
         columns_info_with_set_generators.append(column_info)
     return columns_info_with_set_generators

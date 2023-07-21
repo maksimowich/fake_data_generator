@@ -1,3 +1,6 @@
+from datetime import date, datetime
+
+
 class Column:
     def __init__(self,
                  column_name: str = None,
@@ -40,9 +43,15 @@ class CategoricalColumn(Column):
 
     def get_as_dict(self):
         super_dict = super().get_as_dict()
+        if self.data_type == 'date':
+            values = list(map(lambda x: x.strftime("%Y-%m-%d"), self.values))
+        elif self.data_type == 'timestamp':
+            values = list(map(lambda x: x.strftime("%Y-%m-%d %H:%M:%S"), self.values))
+        else:
+            values = self.values
         super_dict[self.column_name].update({
             'type': 'categorical',
-            'values': self.values,
+            'values': values,
             'probabilities': self.probabilities
         })
         return super_dict
@@ -99,7 +108,7 @@ class DateColumn(Column):
         super_dict = super().get_as_dict()
         super_dict[self.column_name].update({
             'type': 'date',
-            'start_date': self.start_date,
+            'start_date': self.start_date.strftime('%Y-%m-%d'),
             'range_in_days': self.range_in_days,
         })
         return super_dict
@@ -123,17 +132,29 @@ class TimestampColumn(Column):
                  data_type: str = None,
                  generator=None,
                  start_timestamp=None,
-                 range_in_sec=None):
+                 range_in_sec=None,
+                 date_flag=False,
+                 current_dttm_flag=False):
         super().__init__(column_name, data_type, generator)
         self.start_timestamp = start_timestamp
         self.range_in_sec = range_in_sec
+        self.date_flag = date_flag
+        self.current_dttm_flag = current_dttm_flag
+
+    def get_current_dttm_flag(self):
+        return self.current_dttm_flag
+
+    def get_date_flag(self):
+        return self.date_flag
 
     def get_as_dict(self):
         super_dict = super().get_as_dict()
         super_dict[self.column_name].update({
             'type': 'timestamp',
-            'start_timestamp': self.start_timestamp,
+            'start_timestamp': self.start_timestamp.strftime('%Y-%m-%d %H:%M:%S'),
             'range_in_sec': self.range_in_sec,
+            'date_flag': self.date_flag,
+            'current_dttm_flag': self.current_dttm_flag,
         })
         return super_dict
 
@@ -218,7 +239,7 @@ class DecimalColumn(Column):
     def get_probabilities(self):
         return self.probabilities
 
-    def set_precision(self, precision):
+    def set_precision(self, precision: int):
         self.precision = precision
 
     def get_precision(self):
