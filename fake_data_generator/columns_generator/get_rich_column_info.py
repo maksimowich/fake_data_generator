@@ -92,6 +92,8 @@ def get_rich_column_info(column_values,
 
         elif column_data_type == 'string':
             logger.info(f'Column "{column_values.name}" — STRING NON CATEGORICAL COLUMN')
+            if isinstance(column_info, StringColumn) and column_info.get_string_copy_of() is not None:
+                return column_info
             if not isinstance(column_info, StringColumn):
                 column_info = StringColumn(column_name=column_name, data_type=column_data_type)
             if column_info.get_common_regex() is None:
@@ -99,6 +101,5 @@ def get_rich_column_info(column_values,
                 column_info.set_common_regex(common_regex)
             generator = get_fake_data_generator_for_string_column(column_name,
                                                                   column_info.get_common_regex())
-
     column_info.set_generator(generator)
     return column_info

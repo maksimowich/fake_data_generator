@@ -1,29 +1,6 @@
-### *fake_data_generator* – библиотека для генерации искусственных данных (работает с Hive и Impala).
+*fake_data_generator* – библиотека для генерации искусственных данных (работает с Hive и Impala).
 
-#### Описание файлов библиотеки
-
-*fake_data_generator.columns_generator.column.py* – файл с описанием классов, представляющих типы колонок
-
-*fake_data_generator.columns_generator.get_columns_info_with_set_generators.py* – файл, содержащий функцию, создающую генераторы для колонок
-
-*fake_data_generator.columns_generator.get_fake_data_for_insertion.py* – файл, содержащий функцию, возвращающую сгенерированные данные для вставки в БД
-
-*fake_data_generator.columns_generator.get_generator_for_columns.py* – файл, содержащий функции-генераторы для различных типов колонок
-
-*fake_data_generator.columns_generator.get_info_for_columns.py* – файл, содержащий функции, выявляющие паттерны в данных для различных типов колонок
-
-*fake_data_generator.columns_generator.get_rich_column_info.py* – файл, содержащий функцию, возвращающую обогащенный информацией объект-колонку
-
-*fake_data_generator.columns_generator.\_\_init\_\_.py* – файл, инициализирующий питон-пакет
-
-*fake_data_generator.sources_formats.generate_fake_table.py* – файл, содержащий функцию генерации искусственных данных в таблицу
-
-*fake_data_generator.sources_formats.generate_table_profile.py* – файл, содержащий функцию, создающую файл-профиль таблицы
-
-*fake_data_generator.sources_formats.generate_table_from profile.py* – файл, содержащий функцию, генерации искусственных данных в таблицу по файлу-профилю. 
-
-
-Библиотека предоставляет три функции:
+### Библиотека предоставляет три функции:
 
 - *generate_fake_table* – функция генерации искусственных данных в таблицу  
 Обязательные параметры:
@@ -39,6 +16,21 @@
   - **batch_size** – количество строк, которые будут сгенерированы и вставлены в таблицы в одной итерации (генерация и вставка строк в таблицу происходит итерационно)
 
 
+Пример вызова функции:
+````
+generate_fake_table(conn=spark,
+                    source_table_name_with_schema='test.table_name',
+                    dest_table_name_with_schema='test.gen_table_name',
+                    number_of_rows_to_insert=30,
+                    number_of_rows_from_which_to_create_pattern=100,
+                    columns_info=[CategoricalColumn(column_name='col_a')],
+                    batch_size=10)
+````
+Данный вызов создаст таблицу, если она не создана, с именем *test.gen_table_name* (dest_table_name_with_schema),
+сделает селект-запрос всех колонок на *100* строк (number_of_rows_from_which_to_create_pattern) к таблице *test.table_name* (source_table_name_with_schema) и выявит паттерны для генерации данных,
+осуществит вставку в таблицу *test.gen_table_name* *30* строк (number_of_rows_to_insert) батчами по *10* строк (batch_size).
+Также в параметре columns_info дополнительно указано, что колонка col_a считается категориальной.
+
 - *generate_table_profile* – функция, создающая файл-профиль таблицы в формате json. По файлу-профилю можно сгенерировать данные в таблицу с помощью функции *generate_table_from_profile*.  
 Обязательные параметры:
   - **conn** – подключение к базе данных (спарк сессия или движок sqlalchemy)
@@ -50,7 +42,22 @@
   - **columns_info** – дополнительная информация о генерации данных для колонок таблицы (данный параметр принимает список объектов Column)
   - **columns_to_include** – названия колонок, которые должны быть включены в файл-профиль
 
-  
+Пример вызова функции:
+````
+generate_table_profile(conn=spark,
+                       source_table_name_with_schema='test.table_name',
+                       output_table_profile_path='test.table_name.json',
+                       number_of_rows_from_which_to_create_pattern=1000,
+                       columns_info=[
+                           TimestampColumn(column_name='CRE_DATE', date_flag=True),
+                           TimestampColumn(column_name='t_changed_dttm', current_dttm_flag=True),
+                           StringColumn(column_name='t_changed_dttm_str', string_copy_of='t_changed_dttm'),
+                       ])
+````
+Данный вызов функции создаст файл-профиль таблицы в формате json, файл будет назван *test.table_name.json* (output_table_profile_path).
+Паттерны для генерации данных будут выявлены из выборки *1000* строк (number_of_rows_from_which_to_create_pattern) из таблицы *test.table_name*.
+Также в параметре columns_info передана дополнительная информация о том, как генерировать данные для конкретных колонок.
+
 - *generate_table_from_profile* – функция генерации искусственных данных в таблицу по файлу-профилю.  
 Обязательные параметры:
   - **conn** – подключение к базе данных (спарк сессия или движок sqlalchemy)
@@ -62,7 +69,35 @@
   - **columns_info** – дополнительная информация о генерации данных для колонок таблицы (данный параметр принимает список объектов Column)
   - **batch_size** – количество строк, которые будут сгенерированы и вставлены в таблицы в одной итерации (генерация и вставка строк в таблицу происходит итерационно)
 
-Также библиотека предоставляет шесть классов для описания различных типов колонок.
+Пример вызова функции:
+````
+generate_table_from_profile(conn=spark,
+                            source_table_profile_path='test.table_name.json',
+                            dest_table_name_with_schema='test.gen_table_name',
+                            number_of_rows_to_insert=10,
+                            batch_size=30)
+````
+Данный вызов создаст таблицу, если она не создана, с именем *test.gen_table_name* (dest_table_name_with_schema) и
+осуществит генерацию данных (паттерны для генерации берутся из файла-профиля *test.table_name.json*) и
+вставку в таблицу *test.gen_table_name* *30* строк (number_of_rows_to_insert) батчами по *10* строк (batch_size).
+
+### Библиотека предоставляет шесть классов для описания различных типов колонок.
 В зависимости от типа колонки и дополнительной информации, переданной о ней, алгоритм генерации искусственных данных может различаться. Дополнительная информация по каждому типу колонки описывается соответствующим классом.
 Вне зависимости от типа колонки указывается её название и тип данных (параметры column_name и data_type).  
 Для описания колонок библиотека предоставляет классы CategoricalColumn, DecimalColumn, IntColumn, TimestampColumn, DateColumn, StringColumn.
+Дополнительная информация о колонка 
+
+#### Логика по умолчанию определения категориальности колонки
+
+Колонка считается категориальной, если
+либо отношение количества уникальных значений к количеству всех строк меньше 0.2
+либо количество уникальных значений равно 0 или 1. Колонка типа decimal категориальной быть не может.
+
+#### Логика генерации данных для различных типов колонок
+
+- Категориальный: производится случайная выборка из исходных значений с учетом вероятности (null`ы учитываются)
+- Строковый: производится случайная генерация значений по вычисленному общему регулярному выражению
+- Числовой тип: производится случайная генерация значений из оцененной плотности непрерывного распределения
+(при единственном уникальном значении в исходной выборке поля типа decimal будут сгенерированы null)
+- Дата и время: производится случайная генерация значений даты и времени от минимального до максимального значений
+в исходной выборке (параметрами можно задать генерацию текущий даты и времени)

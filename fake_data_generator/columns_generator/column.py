@@ -71,17 +71,26 @@ class StringColumn(Column):
                  column_name: str = None,
                  data_type: str = None,
                  generator=None,
-                 common_regex=None):
+                 common_regex: str = None,
+                 string_copy_of: str = None):
         super().__init__(column_name, data_type, generator)
         self.common_regex = common_regex
+        self.string_copy_of = string_copy_of
 
     def get_as_dict(self):
         super_dict = super().get_as_dict()
         super_dict[self.column_name].update({
             'type': 'string',
             'common_regex': self.common_regex,
+            'string_copy_of': self.string_copy_of,
         })
         return super_dict
+
+    def set_string_copy_of(self, string_copy_of):
+        self.string_copy_of = string_copy_of
+
+    def get_string_copy_of(self):
+        return self.string_copy_of
 
     def set_common_regex(self, common_regex):
         self.common_regex = common_regex
