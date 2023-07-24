@@ -19,7 +19,7 @@ def get_info_for_categorical_column(column_values):
 def get_info_for_number_column(column_values):
     column_values_without_null = column_values.dropna().astype(float)
     kde = gaussian_kde(column_values_without_null.values)
-    x = linspace(min(column_values_without_null), max(column_values_without_null), num=1000)
+    x = linspace(min(column_values_without_null), max(column_values_without_null), num=100)
     pdf = kde.evaluate(x)
     probabilities = pdf/sum(pdf)
     return x.tolist(), probabilities.tolist()
