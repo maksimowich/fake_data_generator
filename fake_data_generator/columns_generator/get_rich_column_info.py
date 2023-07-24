@@ -18,6 +18,7 @@ def get_rich_column_info(column_values,
     categorical_column_flag = (isinstance(column_info, CategoricalColumn) or (column_values.nunique() / column_values.count() < 0.2) or column_values.nunique() in [0, 1]) and \
         'decimal' not in column_data_type and type(column_info) in [Column, CategoricalColumn]
 
+    generator = None
     if categorical_column_flag:
         logger.info(f'Column "{column_values.name}" — CATEGORICAL COLUMN')
         if not isinstance(column_info, CategoricalColumn):
@@ -29,8 +30,6 @@ def get_rich_column_info(column_values,
         generator = get_fake_data_generator_for_categorical_column(column_name,
                                                                    column_info.get_values(),
                                                                    column_info.get_probabilities())
-        column_info.set_generator(generator)
-        return column_info
 
     else:
         if 'decimal' in column_data_type:
@@ -50,8 +49,6 @@ def get_rich_column_info(column_values,
                                                                    column_info.get_x(),
                                                                    column_info.get_probabilities(),
                                                                    column_info.get_precision())
-            column_info.set_generator(generator)
-            return column_info
 
         elif 'int' in column_data_type:
             logger.info(f'Column "{column_values.name}" — INT COLUMN')
@@ -64,8 +61,6 @@ def get_rich_column_info(column_values,
             generator = get_fake_data_generator_for_int_column(column_name,
                                                                column_info.get_x(),
                                                                column_info.get_probabilities())
-            column_info.set_generator(generator)
-            return column_info
 
         elif column_data_type == 'timestamp':
             logger.info(f'Column "{column_values.name}" — TIMESTAMP COLUMN')
@@ -82,8 +77,6 @@ def get_rich_column_info(column_values,
                                                                      column_info.get_range_in_sec(),
                                                                      date_flag,
                                                                      current_dttm_flag)
-            column_info.set_generator(generator)
-            return column_info
 
         elif column_data_type == 'date':
             logger.info(f'Column "{column_values.name}" — DATE COLUMN')
@@ -96,8 +89,6 @@ def get_rich_column_info(column_values,
             generator = get_fake_data_generator_for_date_column(column_name,
                                                                 column_info.get_start_date(),
                                                                 column_info.get_range_in_days())
-            column_info.set_generator(generator)
-            return column_info
 
         elif column_data_type == 'string':
             logger.info(f'Column "{column_values.name}" — STRING NON CATEGORICAL COLUMN')
@@ -108,5 +99,6 @@ def get_rich_column_info(column_values,
                 column_info.set_common_regex(common_regex)
             generator = get_fake_data_generator_for_string_column(column_name,
                                                                   column_info.get_common_regex())
-            column_info.set_generator(generator)
-            return column_info
+
+    column_info.set_generator(generator)
+    return column_info

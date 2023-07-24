@@ -9,15 +9,8 @@ def generate_table_profile(conn,
                            number_of_rows_from_which_to_create_pattern: int,
                            columns_info: list = None,
                            columns_to_include: list = None):
-    logger.info(f"generate_table_profile function was called."
-                f"\n\tSource table: {source_table_name_with_schema}"
-                f"\n\tNumber of source table`s rows from which to create pattern: {number_of_rows_from_which_to_create_pattern}")
-
-    rich_columns_info = get_rich_columns_info(conn,
-                                              source_table_name_with_schema,
-                                              number_of_rows_from_which_to_create_pattern,
-                                              columns_info,
-                                              columns_to_include)
+    rich_columns_info = get_rich_columns_info(conn, source_table_name_with_schema,
+                                              number_of_rows_from_which_to_create_pattern, columns_info, columns_to_include)
 
     dict_to_dump = {}
     for column_info in rich_columns_info:

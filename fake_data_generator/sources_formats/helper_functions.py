@@ -24,9 +24,7 @@ def get_inferred_data_type(column_data_type):
         return IntegerType()
     elif 'decimal' in column_data_type:
         precision, scale = re.search(r'decimal\((\d+),(\d+)\)', column_data_type).groups()
-        precision = int(precision)
-        scale = int(scale)
-        return DecimalType(precision, scale)
+        return DecimalType(int(precision), int(scale))
     elif column_data_type == 'timestamp':
         return TimestampType()
     elif column_data_type == 'date':
@@ -35,7 +33,8 @@ def get_inferred_data_type(column_data_type):
         return StringType()
 
 
-def get_correct_column_values(column_values: Series, column_data_type: str):
+def get_correct_column_values(column_values: Series,
+                              column_data_type: str):
     number_of_nulls = column_values.isnull().sum()
     if 'int' in column_data_type:
         correct_column_values = concat([column_values.dropna().astype(int), Series([None] * number_of_nulls)])
@@ -58,14 +57,12 @@ def get_rich_columns_info(conn,
                           number_of_rows_from_which_to_create_pattern: int,
                           columns_info: list[Column] = None,
                           columns_to_include: list[str] = None):
-    logger.info(f'Start making describe-query from table {source_table_name_with_schema}.')
     describe_query = f"DESCRIBE {source_table_name_with_schema};"
     if isinstance(conn, sqlalchemy.engine.base.Engine):
         with conn.begin() as c:
             describe_data_in_df = pd.read_sql_query(describe_query, c).rename(columns={'name': 'col_name', 'type': 'data_type'})
     else:
         describe_data_in_df = conn.sql(describe_query).toPandas().rename(columns={'name': 'col_name', 'type': 'data_type'})
-    logger.info(f'Describe-query result was read into Dataframe. Number of rows fetched is {describe_data_in_df.shape[0]}.')
 
     logger.info(f'Start making select-query from table {source_table_name_with_schema}.')
     limit_clause = f"LIMIT {number_of_rows_from_which_to_create_pattern}" if number_of_rows_from_which_to_create_pattern is not None else ''
@@ -85,17 +82,18 @@ def get_rich_columns_info(conn,
         if columns_to_include is None or row['col_name'] in columns_to_include:
             column_info = column_name_to_column_info_in_dict.get(row['col_name'], Column(column_name=row['col_name']))
             column_info.set_data_type(row['data_type'])
-            rich_columns_info.append(get_rich_column_info(column_values=get_correct_column_values(table_data_in_df[column_info.get_column_name()], row['data_type']),
+            correct_column_values = get_correct_column_values(column_values=table_data_in_df[column_info.get_column_name()],
+                                                              column_data_type=row['data_type'])
+            rich_columns_info.append(get_rich_column_info(column_values=correct_column_values,
                                                           column_info=column_info))
     return rich_columns_info
 
 
-def create_table(conn,
-                 source_table_name_with_schema=None,
-                 dest_table_name_with_schema=None,
-                 columns_to_include=None,
-                 create_query=None):
-    logger.info(f'Start creating {dest_table_name_with_schema} table.')
+def create_table_if_not_exists(conn,
+                               source_table_name_with_schema=None,
+                               dest_table_name_with_schema=None,
+                               columns_to_include=None,
+                               create_query=None):
     if create_query is None:
         create_query = f'CREATE TABLE IF NOT EXISTS {dest_table_name_with_schema} AS ' \
                        f'SELECT {get_string_for_column_names(columns_to_include)} ' \
@@ -105,7 +103,6 @@ def create_table(conn,
             c.execute(create_query)
     else:
         conn.sql(create_query)
-    logger.info(f'{dest_table_name_with_schema} table was created.')
 
 
 def execute_insertion(conn,
