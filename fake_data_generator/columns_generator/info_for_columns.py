@@ -16,32 +16,29 @@ def get_info_for_categorical_column(column_values):
     return values, probabilities
 
 
-def get_info_for_number_column(column_values):
-    column_values_without_null = column_values.dropna().astype(float)
-    kde = gaussian_kde(column_values_without_null.values)
-    x = linspace(min(column_values_without_null), max(column_values_without_null), num=100)
-    pdf = kde.evaluate(x)
-    probabilities = pdf/sum(pdf)
-    return x.tolist(), probabilities.tolist()
+CONVERTERS_TO_FLOAT = {
+    'int': float,
+    'float': lambda x: x,
+    'date': lambda x: x.toordinal(),
+    'datetime': lambda x: x.timestamp(),
+}
 
 
-def get_info_for_date_column(column_values):
-    column_values_without_nulls = column_values.dropna()
-    start_date = column_values_without_nulls.min()
-    end_date = column_values_without_nulls.max()
-    range_in_days = (end_date - start_date).days
-    return start_date, range_in_days
+def get_info_for_continuous_column(column_values, input_data_type: str):
+    float_column_values_without_null = column_values.dropna().apply(CONVERTERS_TO_FLOAT[input_data_type])
+    kde = gaussian_kde(float_column_values_without_null.values)
+    x = linspace(min(float_column_values_without_null), max(float_column_values_without_null), num=100)
+    intervals = []
+    probabilities = []
+    for index, value in enumerate(x[:-1]):
+        interval = (value, x[index + 1])
+        probability = kde.integrate_box_1d(*interval)
+        intervals.append(interval)
+        probabilities.append(probability)
+    return intervals, probabilities
 
 
-def get_info_for_timestamp_column(column_values):
-    column_values_without_nulls = column_values.dropna()
-    start_timestamp = column_values_without_nulls.min()
-    end_timestamp = column_values_without_nulls.max()
-    range_in_sec = (end_timestamp - start_timestamp).total_seconds()
-    return start_timestamp, range_in_sec
-
-
-def get_common_regex(strings) -> str:
+def get_info_for_string_column(strings) -> str:
     """
     Function that returns common regular expression of given strings.
 

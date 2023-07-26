@@ -1,8 +1,12 @@
+from typing import Generator
+from pandas import NaT
+
+
 class Column:
     def __init__(self,
-                 column_name: str = None,
+                 column_name: str,
                  data_type: str = None,
-                 generator=None):
+                 generator: Generator = None):
         self.column_name = column_name
         self.data_type = data_type
         self.generator = generator
@@ -29,11 +33,11 @@ class Column:
 
 class CategoricalColumn(Column):
     def __init__(self,
-                 column_name: str = None,
+                 column_name: str,
                  data_type: str = None,
-                 generator=None,
-                 values=None,
-                 probabilities=None):
+                 generator: Generator = None,
+                 values: list = None,
+                 probabilities: list = None):
         super().__init__(column_name, data_type, generator)
         self.values = values
         self.probabilities = probabilities
@@ -41,13 +45,13 @@ class CategoricalColumn(Column):
     def get_as_dict(self):
         super_dict = super().get_as_dict()
         if self.data_type == 'date':
-            values = list(map(lambda x: x.strftime("%Y-%m-%d"), self.values))
+            values = list(map(lambda x: x.strftime("%Y-%m-%d") if x is not NaT else None, self.values))
         elif self.data_type == 'timestamp':
-            values = list(map(lambda x: x.strftime("%Y-%m-%d %H:%M:%S"), self.values))
+            values = list(map(lambda x: x.strftime("%Y-%m-%d %H:%M:%S") if x is not NaT else None, self.values))
         else:
             values = self.values
         super_dict[self.column_name].update({
-            'type': 'categorical',
+            'type': 'CATEGORICAL',
             'values': values,
             'probabilities': self.probabilities
         })
@@ -66,11 +70,53 @@ class CategoricalColumn(Column):
         return self.probabilities
 
 
+class ContinuousColumn(Column):
+    def __init__(self,
+                 column_name: str,
+                 data_type: str = None,
+                 generator: Generator = None,
+                 intervals: list = None,
+                 probabilities: list = None,
+                 date_flag: bool = False):
+        super().__init__(column_name, data_type, generator)
+        self.intervals = intervals
+        self.probabilities = probabilities
+        self.date_flag = date_flag
+
+    def get_as_dict(self):
+        super_dict = super().get_as_dict()
+        super_dict[self.column_name].update({
+            'type': 'CONTINUES',
+            'intervals': self.intervals,
+            'probabilities': self.probabilities,
+            'date_flag': self.date_flag,
+        })
+        return super_dict
+
+    def set_intervals(self, intervals):
+        self.intervals = intervals
+
+    def get_intervals(self):
+        return self.intervals
+
+    def set_probabilities(self, probabilities):
+        self.probabilities = probabilities
+
+    def get_probabilities(self):
+        return self.probabilities
+
+    def set_date_flag(self, date_flag: bool):
+        self.date_flag = date_flag
+
+    def get_date_flag(self):
+        return self.date_flag
+
+
 class StringColumn(Column):
     def __init__(self,
-                 column_name: str = None,
+                 column_name: str,
                  data_type: str = None,
-                 generator=None,
+                 generator: Generator = None,
                  common_regex: str = None,
                  string_copy_of: str = None):
         super().__init__(column_name, data_type, generator)
@@ -80,7 +126,7 @@ class StringColumn(Column):
     def get_as_dict(self):
         super_dict = super().get_as_dict()
         super_dict[self.column_name].update({
-            'type': 'string',
+            'type': 'STRING',
             'common_regex': self.common_regex,
             'string_copy_of': self.string_copy_of,
         })
@@ -99,154 +145,16 @@ class StringColumn(Column):
         return self.common_regex
 
 
-class DateColumn(Column):
+class CurrentTimestampColumn(Column):
     def __init__(self,
-                 column_name: str = None,
+                 column_name: str,
                  data_type: str = None,
-                 generator=None,
-                 start_date=None,
-                 range_in_days=None):
+                 generator: Generator = None):
         super().__init__(column_name, data_type, generator)
-        self.start_date = start_date
-        self.range_in_days = range_in_days
 
     def get_as_dict(self):
         super_dict = super().get_as_dict()
         super_dict[self.column_name].update({
-            'type': 'date',
-            'start_date': self.start_date.strftime('%Y-%m-%d'),
-            'range_in_days': self.range_in_days,
+            'type': 'CURRENT_TIMESTAMP',
         })
         return super_dict
-
-    def set_start_date(self, start_date):
-        self.start_date = start_date
-
-    def get_start_date(self):
-        return self.start_date
-
-    def set_range_in_days(self, range_in_days):
-        self.range_in_days = range_in_days
-
-    def get_range_in_days(self):
-        return self.range_in_days
-
-
-class TimestampColumn(Column):
-    def __init__(self,
-                 column_name: str = None,
-                 data_type: str = None,
-                 generator=None,
-                 start_timestamp=None,
-                 range_in_sec=None,
-                 date_flag=False,
-                 current_dttm_flag=False):
-        super().__init__(column_name, data_type, generator)
-        self.start_timestamp = start_timestamp
-        self.range_in_sec = range_in_sec
-        self.date_flag = date_flag
-        self.current_dttm_flag = current_dttm_flag
-
-    def get_current_dttm_flag(self):
-        return self.current_dttm_flag
-
-    def get_date_flag(self):
-        return self.date_flag
-
-    def get_as_dict(self):
-        super_dict = super().get_as_dict()
-        super_dict[self.column_name].update({
-            'type': 'timestamp',
-            'start_timestamp': self.start_timestamp.strftime('%Y-%m-%d %H:%M:%S'),
-            'range_in_sec': self.range_in_sec,
-            'date_flag': self.date_flag,
-            'current_dttm_flag': self.current_dttm_flag,
-        })
-        return super_dict
-
-    def set_start_timestamp(self, start_timestamp):
-        self.start_timestamp = start_timestamp
-
-    def get_start_timestamp(self):
-        return self.start_timestamp
-
-    def set_range_in_sec(self, range_in_sec):
-        self.range_in_sec = range_in_sec
-
-    def get_range_in_sec(self):
-        return self.range_in_sec
-
-
-class IntColumn(Column):
-    def __init__(self,
-                 column_name: str = None,
-                 data_type: str = None,
-                 generator=None,
-                 x=None,
-                 probabilities=None):
-        super().__init__(column_name, data_type, generator)
-        self.x = x
-        self.probabilities = probabilities
-
-    def get_as_dict(self):
-        super_dict = super().get_as_dict()
-        super_dict[self.column_name].update({
-            'type': 'int',
-            'x': self.x,
-            'probabilities': self.probabilities,
-        })
-        return super_dict
-
-    def set_x(self, x):
-        self.x = x
-
-    def get_x(self):
-        return self.x
-
-    def set_probabilities(self, probabilities):
-        self.probabilities = probabilities
-
-    def get_probabilities(self):
-        return self.probabilities
-
-
-class DecimalColumn(Column):
-    def __init__(self,
-                 column_name: str = None,
-                 data_type: str = None,
-                 generator=None,
-                 x=None,
-                 probabilities=None,
-                 precision=None):
-        super().__init__(column_name, data_type, generator)
-        self.x = x
-        self.probabilities = probabilities
-        self.precision = precision
-
-    def get_as_dict(self):
-        super_dict = super().get_as_dict()
-        super_dict[self.column_name].update({
-            'type': 'decimal',
-            'x': self.x,
-            'probabilities': self.probabilities,
-            'precision': self.precision,
-        })
-        return super_dict
-
-    def set_x(self, x):
-        self.x = x
-
-    def get_x(self):
-        return self.x
-
-    def set_probabilities(self, probabilities):
-        self.probabilities = probabilities
-
-    def get_probabilities(self):
-        return self.probabilities
-
-    def set_precision(self, precision: int):
-        self.precision = precision
-
-    def get_precision(self):
-        return self.precision

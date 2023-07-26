@@ -37,7 +37,7 @@ def get_correct_column_values(column_values: Series,
                               column_data_type: str):
     number_of_nulls = column_values.isnull().sum()
     if 'int' in column_data_type:
-        correct_column_values = concat([column_values.dropna().astype(int), Series([None] * number_of_nulls)])
+        correct_column_values = concat([column_values.dropna().astype(int), Series([None] * number_of_nulls, dtype=object)])
         correct_column_values.name = column_values.name
         return correct_column_values
     elif 'decimal' in column_data_type:
