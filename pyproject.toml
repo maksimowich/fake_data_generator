@@ -1,19 +1,19 @@
 [tool.poetry]
-name = "fake_data_generator"
+name = "fake_table_data_generator"
 packages = [
   { include = "fake_data_generator" },
 ]
-version = "1.0.3"
+version = "1.0.6"
 description = ""
 authors = ["Alexander Maksimovich <cahr2001@mail.ru>"]
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
-pandas = "1.5.3"
-numpy = "^1.24.3"
-scipy = "^1.10.1"
-rstr = "^3.2.1"
-loguru = "^0.7.0"
+python = ">3"
+pandas = "1.3.5"
+numpy = "1.21.6"
+scipy = "1.7.3"
+rstr = "3.2.1"
+loguru = "0.7.0"
 pyspark = "^3"
 sqlalchemy = "^2.0.19"
 

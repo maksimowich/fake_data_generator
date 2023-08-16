@@ -55,8 +55,8 @@ def get_correct_column_values(column_values: Series,
 def get_rich_columns_info(conn,
                           source_table_name_with_schema: str,
                           number_of_rows_from_which_to_create_pattern: int,
-                          columns_info: list[Column] = None,
-                          columns_to_include: list[str] = None):
+                          columns_info: list = None,
+                          columns_to_include: list = None):
     describe_query = f"DESCRIBE {source_table_name_with_schema};"
     if isinstance(conn, sqlalchemy.engine.base.Engine):
         with conn.begin() as c:

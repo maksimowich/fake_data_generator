@@ -1,9 +1,9 @@
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from decimal import Decimal
 from random import uniform
 from rstr import xeger
 from pandas import Series
-from pytz import timezone
+# from pytz import timezone
 from numpy.random import choice
 
 
@@ -75,5 +75,5 @@ def get_generator_for_string_column(column_name, common_regex):
 def get_generator_for_current_dttm_column(column_name):
     output_size = yield
     while True:
-        fake_timestamps = [datetime.now(tz=timezone('Europe/Moscow')).replace(microsecond=0) for _ in range(output_size)]
+        fake_timestamps = [datetime.now().replace(microsecond=0) + timedelta(hours=3) for _ in range(output_size)]
         output_size = yield Series(fake_timestamps, name=column_name)
